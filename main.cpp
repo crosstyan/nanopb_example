@@ -7,6 +7,31 @@
 #include "pb_encode.h"
 #include "pb_decode.h"
 
+/**
+ * @brief a function finds retrieve value of between its key. always move a unit up.
+ * 
+ * @tparam T the type of value of map
+ * @param keys a std::vector of int which should be sorted
+ * @param m  a map whose key is int
+ * @param val a value you want
+ * @return T 
+ */
+template<typename T>
+T find_between(std::vector<int> keys, std::map<int, T> &m, int val){
+  size_t idx = 0;
+  // since keys is sorted we can get result easily
+  for (auto key:keys){
+    if (val < key){
+      break;
+    }
+    idx += 1;
+  }
+  if (idx >= keys.size()){
+    idx = keys.size() - 1;
+  }
+  return m.at(keys[idx]);
+}
+
 std::string uint8_to_hex_string(const uint8_t *v, const size_t s) {
   std::stringstream ss;
 
@@ -21,10 +46,10 @@ std::string uint8_to_hex_string(const uint8_t *v, const size_t s) {
 
 using PbEncodeCb = bool (*)(pb_ostream_t *stream, const pb_field_t *field, void * const *arg);
 
-int main() {
+int main(int argc, char *argv[]) {
   // dists should be ordered
-  auto dists = std::vector<int>{0, 100, 200, 300, 400, 500, 600, 700, 800};
-  auto speedes = std::vector<float>{1, 2, 2.5, 3, 4, 3.5, 3, 2, 4};
+  auto dists = std::vector<int>{100, 200, 300, 400, 500, 600, 700, 800};
+  auto speedes = std::vector<float>{2, 2.5, 3, 4, 3.5, 3, 2, 4};
 
   if (dists.size() < speedes.size()){
     std::cout << "Error: dists size is too small. \n";
@@ -51,7 +76,7 @@ int main() {
   auto encode_tuple_list = [](pb_ostream_t *stream, const pb_field_t *field, void * const *arg) {
     // dereference it is ok since you don't write anything to this vector.
     auto &tuple_list = *(reinterpret_cast<std::vector<TupleIntFloat> *>(*arg));
-    for (auto t : tuple_list){
+    for (auto &t : tuple_list){
       if (!pb_encode_tag_for_field(stream, field)) {
         return false;
       } else {
@@ -73,7 +98,7 @@ int main() {
     auto stream_hex = uint8_to_hex_string(buf, message_length);
     std::cout << stream_hex << "\n" << "length: " << message_length << "\n";
   } else {
-    std::cout << "Error: No idea. What's going wrong? \n";
+    std::cout << "Error: Encoding failure. What's going wrong? \n";
     return 1;
   }
 
@@ -110,12 +135,32 @@ int main() {
       std::cout << "But I got nothing! \n";
       return 1;
     }
-    for (auto t : recevied_tuple){
+    for (auto &t : recevied_tuple){
       std::cout << "dist: " << t.dist << "\tspeed: " << t.speed << "\n";
     }
-    return 0;
   } else {
     std::cout << "Error: Something goes wrong when decoding \n";
     return 1;
   }
+  // do something interesting
+  {
+    auto dists = std::vector<int>{};
+    auto m = std::map<int, float>{};
+    for (auto &t : recevied_tuple){
+      dists.emplace_back(t.dist);
+      m.insert_or_assign(t.dist, t.speed);
+    }
+    // should be ascending order
+    std::sort(dists.begin(), dists.end());
+    // default val
+    int val = 50;
+    if (argc > 1){
+      auto first_arg = std::string(argv[1]);
+      val =  std::stoi(first_arg);
+    }
+    auto res = find_between(dists, m, val);
+    std::cout << "speed at " << val << " is " << res << ".\n";
+  }
+
+  return 0;
 }
