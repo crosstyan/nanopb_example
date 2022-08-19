@@ -47,3 +47,5 @@ _deps
 
 build
 cmake-build-debug
+
+.cache

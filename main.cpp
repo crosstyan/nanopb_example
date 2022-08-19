@@ -3,46 +3,11 @@
 #include <iomanip>
 #include <vector>
 #include <map>
+#include "utils.h"
 #include "msg.pb.h"
 #include "pb_encode.h"
 #include "pb_decode.h"
 
-/**
- * @brief a function finds retrieve value of between its key. always move a unit up.
- * 
- * @tparam T the type of value of map
- * @param keys a std::vector of int which should be sorted
- * @param m  a map whose key is int
- * @param val a value you want
- * @return T 
- */
-template<typename T>
-T find_between(std::vector<int> keys, std::map<int, T> &m, int val){
-  size_t idx = 0;
-  // since keys is sorted we can get result easily
-  for (auto key:keys){
-    if (val < key){
-      break;
-    }
-    idx += 1;
-  }
-  if (idx >= keys.size()){
-    idx = keys.size() - 1;
-  }
-  return m.at(keys[idx]);
-}
-
-std::string uint8_to_hex_string(const uint8_t *v, const size_t s) {
-  std::stringstream ss;
-
-  ss << std::hex << std::setfill('0');
-
-  for (int i = 0; i < s; i++) {
-    ss << std::hex << std::setw(2) << static_cast<int>(v[i]);
-  }
-
-  return ss.str();
-}
 
 using PbEncodeCb = bool (*)(pb_ostream_t *stream, const pb_field_t *field, void * const *arg);
 
@@ -144,21 +109,19 @@ int main(int argc, char *argv[]) {
   }
   // do something interesting
   {
-    auto dists = std::vector<int>{};
     auto m = std::map<int, float>{};
     for (auto &t : recevied_tuple){
       dists.emplace_back(t.dist);
       m.insert_or_assign(t.dist, t.speed);
     }
-    // should be ascending order
-    std::sort(dists.begin(), dists.end());
+    auto retriever = ValueRetriever<float>(m);
     // default val
     int val = 50;
     if (argc > 1){
       auto first_arg = std::string(argv[1]);
       val =  std::stoi(first_arg);
     }
-    auto res = find_between(dists, m, val);
+    auto res = retriever.retrieve(val);
     std::cout << "speed at " << val << " is " << res << ".\n";
   }
 
