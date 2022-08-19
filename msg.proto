@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message TupleIntFloat {
+  int32 dist = 1;
+  float speed =2;
+}
+
+message TrackConfig {
+  repeated TupleIntFloat lst = 1;
+}
